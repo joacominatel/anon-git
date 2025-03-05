@@ -3,8 +3,18 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth, useIsAuthenticated } from "@/context/AuthContext"
-import { getRepository, deleteRepository, updateRepository, addCollaborator, getCollaboratorsByRepository, removeCollaborator, updateCollaboratorRole, checkUserRepositoryPermissions } from "@/services/repositoryService"
+import { 
+  getRepository, 
+  deleteRepository, 
+  updateRepository, 
+  addCollaborator, 
+  getCollaboratorsByRepository, 
+  removeCollaborator, 
+  updateCollaboratorRole, 
+  checkUserRepositoryPermissions 
+} from "@/services/repositoryService"
 import { getAllUsers } from "@/services/userServices"
+import { User } from "@/lib/types/userTypes"
 import type { Repository, RepositoryCollaborator } from "@/lib/types/repositoryTypes"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -40,21 +50,30 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CollaboratorsList } from "@/components/Repositories/CollaboratorsList"
 
-// Definir el tipo User aquí para evitar problemas de importación
-type User = {
-  id: string;
-  username: string;
-  email: string;
-  full_name?: string;
-  display_name?: string;
-  country?: string;
-  phone?: string;
-  avatar_url?: string;
-  bio?: string;
-  wallet_address?: string;
-  created_at: string; 
-  updated_at: string;
-};
+// Tipo para representar la estructura de la respuesta API de colaboradores
+interface CollaboratorResponse {
+  repository_id: string;
+  user_id: string;
+  role: 'admin' | 'write' | 'read';
+  created_at: string;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    full_name?: string;
+    avatar_url?: string;
+    created_at?: string;
+    updated_at?: string;
+  }[];
+}
+
+// Tipo para permisos de usuario en el repositorio
+interface RepositoryPermissions {
+  canView: boolean;
+  canEdit: boolean;
+  isOwner: boolean;
+  role: string | null;
+}
 
 export default function RepositoryDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -67,12 +86,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
   const [activeTab, setActiveTab] = useState("code")
   const [collaborators, setCollaborators] = useState<RepositoryCollaborator[]>([])
   const [users, setUsers] = useState<User[]>([])
-  const [permissions, setPermissions] = useState<{
-    canView: boolean;
-    canEdit: boolean;
-    isOwner: boolean;
-    role: string | null;
-  }>({
+  const [permissions, setPermissions] = useState<RepositoryPermissions>({
     canView: false,
     canEdit: false,
     isOwner: false,
@@ -85,6 +99,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
   
   const canManageRepository = permissions.isOwner || isUserAdmin
 
+  // Cargar el repositorio
   useEffect(() => {
     const fetchRepository = async () => {
       setIsLoading(true)
@@ -107,6 +122,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
     fetchRepository()
   }, [params.id])
 
+  // Verificar permisos de usuario
   useEffect(() => {
     const checkPermissions = async () => {
       if (isAuthenticated && user && repository) {
@@ -131,18 +147,44 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
     }
   }, [repository, isAuthenticated, user]);
 
+  // Cargar colaboradores
   useEffect(() => {
     const fetchCollaborators = async () => {
       try {
         const data = await getCollaboratorsByRepository(params.id);
-        setCollaborators(data);
+        // Transformar los datos para manejar correctamente los tipos
+        const formattedData = data.map((collaborator: CollaboratorResponse) => {
+          // Crear un objeto conformando con el tipo RepositoryCollaborator
+          const formattedCollaborator: RepositoryCollaborator = {
+            repository_id: collaborator.repository_id,
+            user_id: collaborator.user_id,
+            role: collaborator.role,
+            created_at: collaborator.created_at,
+            // Transformar el objeto de usuario para hacerlo compatible con el tipo User
+            user: collaborator.user[0] ? {
+              id: collaborator.user[0].id,
+              username: collaborator.user[0].username,
+              email: collaborator.user[0].email,
+              full_name: collaborator.user[0].full_name,
+              avatar_url: collaborator.user[0].avatar_url,
+              created_at: collaborator.user[0].created_at || "",
+              updated_at: collaborator.user[0].updated_at || ""
+            } : undefined
+          };
+          return formattedCollaborator;
+        });
+        setCollaborators(formattedData);
       } catch (err) {
         console.error("Error fetching collaborators:", err);
       }
     };
-    fetchCollaborators();
-  }, [params.id]);
+    
+    if (repository) {
+      fetchCollaborators();
+    }
+  }, [params.id, repository]);
 
+  // Manejadores de eventos
   const handleAddCollaborator = async (collaboratorId: string, role: 'admin' | 'write' | 'read' = 'read') => {
     if (!repository?.id) {
       toast.error("Repository ID is missing")
@@ -151,8 +193,27 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
     try {
       await addCollaborator(repository.id, collaboratorId, role)
       toast.success("Colaborador añadido exitosamente")
+      
+      // Recargar colaboradores después de añadir uno nuevo
       const updatedCollaborators = await getCollaboratorsByRepository(repository.id)
-      setCollaborators(updatedCollaborators)
+      const formattedData = updatedCollaborators.map((collaborator: CollaboratorResponse) => {
+        return {
+          repository_id: collaborator.repository_id,
+          user_id: collaborator.user_id,
+          role: collaborator.role,
+          created_at: collaborator.created_at,
+          user: collaborator.user[0] ? {
+            id: collaborator.user[0].id,
+            username: collaborator.user[0].username,
+            email: collaborator.user[0].email,
+            full_name: collaborator.user[0].full_name,
+            avatar_url: collaborator.user[0].avatar_url,
+            created_at: collaborator.user[0].created_at || "",
+            updated_at: collaborator.user[0].updated_at || ""
+          } : undefined
+        };
+      });
+      setCollaborators(formattedData);
     } catch (err) {
       console.error("Error adding collaborator:", err)
       toast.error("No se pudo añadir al colaborador: " + (err as Error).message)
@@ -227,6 +288,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
     }
   }
 
+  // Componentes de estado condicionales
   if (isLoading) {
     return (
       <div className="p-8 flex justify-center items-center h-64">
@@ -265,8 +327,10 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
     )
   }
 
+  // Interfaz principal del repositorio
   return (
     <div className="p-8">
+      {/* Encabezado del repositorio */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
@@ -286,6 +350,8 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
           </div>
           <p className="text-muted-foreground mt-1">{repository.description || "Sin descripción"}</p>
         </div>
+        
+        {/* Acciones de administración */}
         {canManageRepository && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setActiveTab("settings")}>
@@ -331,6 +397,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
         )}
       </div>
 
+      {/* Estadísticas del repositorio */}
       <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-6">
         <div className="flex items-center">
           <GitBranchIcon className="h-4 w-4 mr-1" />
@@ -352,6 +419,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
 
       <Separator className="my-6" />
 
+      {/* Pestañas de navegación */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="code">Code</TabsTrigger>
@@ -360,6 +428,8 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
           {permissions.isOwner && <TabsTrigger value="settings">Settings</TabsTrigger>}
           <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
         </TabsList>
+        
+        {/* Contenido de pestañas */}
         <TabsContent value="code" className="mt-6">
           <div className="bg-muted p-8 rounded-md text-center">
             <GitBranchIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -367,23 +437,27 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
             <p className="text-muted-foreground mt-2">This is a placeholder for the repository content view.</p>
           </div>
         </TabsContent>
+        
         <TabsContent value="issues" className="mt-6">
           <div className="bg-muted p-8 rounded-md text-center">
             <h3 className="text-lg font-medium">No issues yet</h3>
             <p className="text-muted-foreground mt-2">Issues for this repository will appear here.</p>
           </div>
         </TabsContent>
+        
         <TabsContent value="pull-requests" className="mt-6">
           <div className="bg-muted p-8 rounded-md text-center">
             <h3 className="text-lg font-medium">No pull requests yet</h3>
             <p className="text-muted-foreground mt-2">Pull requests for this repository will appear here.</p>
           </div>
         </TabsContent>
+        
         {permissions.isOwner && (
           <TabsContent value="settings" className="mt-6">
             <RepositorySettings repository={repository} onUpdate={handleUpdateRepository} />
           </TabsContent>
         )}
+        
         <TabsContent value="collaborators" className="mt-6">
           <div className="rounded-md border p-6">
             <h2 className="text-xl font-bold mb-4">Colaboradores del Repositorio</h2>
