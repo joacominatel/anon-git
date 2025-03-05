@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth, useIsAuthenticated } from "@/context/AuthContext"
-import { getRepository, deleteRepository, updateRepository } from "@/services/repositoryService"
-import type { Repository } from "@/lib/types/repositoryTypes"
+import { getRepository, deleteRepository, updateRepository, addCollaborator, getCollaboratorsByRepository, removeCollaborator } from "@/services/repositoryService"
+import type { Repository, RepositoryCollaborator } from "@/lib/types/repositoryTypes"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +22,7 @@ import {
   TrashIcon,
   AlertTriangleIcon,
   ArrowLeftIcon,
+  UsersIcon,
 } from "lucide-react"
 import { format } from "date-fns"
 import { RepositorySettings } from "@/components/Repositories/RepositorySettings"
@@ -36,6 +37,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { CollaboratorsList } from "@/components/Repositories/CollaboratorsList"
 
 export default function RepositoryDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -46,6 +48,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
   const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [activeTab, setActiveTab] = useState("code")
+  const [collaborators, setCollaborators] = useState<RepositoryCollaborator[]>([])
 
   const isOwner = isAuthenticated && user?.id === repository?.owner_id
 
@@ -71,6 +74,42 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
     fetchRepository()
   }, [params.id])
 
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      const data = await getCollaboratorsByRepository(params.id)
+      setCollaborators(data)
+    }
+    fetchCollaborators()
+  }, [params.id])
+
+  const handleAddCollaborator = async (collaboratorId: string) => {
+    if (!repository?.id) {
+      toast.error("Repository ID is missing")
+      return
+    }
+    try {
+      await addCollaborator(repository.id, collaboratorId)
+      toast.success("Collaborator added successfully")
+    } catch (err) {
+      console.error("Error adding collaborator:", err)
+      toast.error("Failed to add collaborator")
+    }
+  }
+
+  const handleRemoveCollaborator = async (collaboratorId: string) => {
+    if (!repository?.id) {
+      toast.error("Repository ID is missing")
+      return
+    }
+    try {
+      await removeCollaborator(repository.id, collaboratorId)
+      toast.success("Collaborator removed successfully")
+    } catch (err) {
+      console.error("Error removing collaborator:", err)
+      toast.error("Failed to remove collaborator")
+    }
+  }
+  
   const handleDelete = async () => {
     if (!repository) return
 
@@ -133,7 +172,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
 
   if (!canView) {
     return (
-      <div className="container py-8">
+      <div className="p-8">
         <div className="bg-destructive/15 text-destructive p-4 rounded-md my-4 flex items-center">
           <AlertTriangleIcon className="h-5 w-5 mr-2" />
           This repository is private. You don't have permission to view it.
@@ -147,7 +186,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
   }
 
   return (
-    <div className="container py-8">
+    <div className="p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
@@ -158,6 +197,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
             </Badge>
             {repository.for_sale && <Badge variant="destructive">For Sale</Badge>}
             {repository.accepts_donations && <Badge variant="default">Accepts Donations</Badge>}
+            <Badge variant="secondary">{collaborators.length} collaborators</Badge>
           </div>
           <p className="text-muted-foreground mt-1">{repository.description || "No description provided"}</p>
         </div>
@@ -166,6 +206,10 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
             <Button variant="outline" onClick={() => setActiveTab("settings")}>
               <PencilIcon className="h-4 w-4 mr-2" />
               Edit
+            </Button>
+            <Button variant="outline" onClick={() => setActiveTab("collaborators")}>
+              <UsersIcon className="h-4 w-4 mr-2" />
+              Collaborators
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -227,6 +271,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
           <TabsTrigger value="issues">Issues</TabsTrigger>
           <TabsTrigger value="pull-requests">Pull Requests</TabsTrigger>
           {isOwner && <TabsTrigger value="settings">Settings</TabsTrigger>}
+          <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
         </TabsList>
         <TabsContent value="code" className="mt-6">
           <div className="bg-muted p-8 rounded-md text-center">
@@ -252,6 +297,9 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
             <RepositorySettings repository={repository} onUpdate={handleUpdateRepository} />
           </TabsContent>
         )}
+        <TabsContent value="collaborators" className="mt-6">
+          <CollaboratorsList collaborators={collaborators} users={[]} />
+        </TabsContent>
       </Tabs>
     </div>
   )

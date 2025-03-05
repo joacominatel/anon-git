@@ -50,3 +50,47 @@ export async function getRepositoriesByUser(userId: string) {
   }
   return data
 }
+
+export async function addCollaborator(repositoryId: string, collaboratorId: string) {
+  //   check if user is owner of repository
+  const { data: repository, error: repositoryError } = await client.from('repositories').select('owner_id').eq('id', repositoryId).single()
+  if (repositoryError) {
+    throw repositoryError
+  }
+  if (repository.owner_id !== collaboratorId) {
+    throw new Error('User is not the owner of the repository')
+  }
+
+  const { data, error } = await client.from('collaborators').insert({ repository_id: repositoryId, user_id: collaboratorId })
+  if (error) {
+    throw error
+  }
+  return data
+}
+
+export async function getCollaborators(repositoryId: string) {
+  const { data, error } = await client.from('collaborators').select('*').eq('repository_id', repositoryId)
+  if (error) {
+    throw error
+  }
+  return data
+}
+
+export async function removeCollaborator(repositoryId: string, collaboratorId: string) {
+    // check if user is owner of repository
+    const { data: repository, error: repositoryError } = await client.from('repositories').select('owner_id').eq('id', repositoryId).single()
+    if (repositoryError) {
+        throw repositoryError
+    }
+    if (repository.owner_id !== collaboratorId) {
+        throw new Error('User is not the owner of the repository')
+    }
+}
+
+export async function getCollaboratorsByRepository(repositoryId: string) {
+  const { data, error } = await client.from('collaborators').select('*').eq('repository_id', repositoryId)
+  if (error) {
+    throw error
+  }
+  return data
+}
