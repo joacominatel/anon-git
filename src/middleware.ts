@@ -1,12 +1,37 @@
 import type { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/middleware"
+import { NextResponse } from "next/server"
+import { createClient as createBrowserClient } from "@/lib/supabase/client"
+
+const PUBLIC_PATHS = [
+  '/login',
+  '/register',
+  '/reset-password',
+  '/update-password',
+  '/logout',
+  '/',
+  '/about',
+  '/contact'
+]
 
 export async function middleware(request: NextRequest) {
   const res = createClient(request)
+  const browserClient = createBrowserClient()
 
-  // You can add authentication checks here if needed
-  // For example, redirecting authenticated users away from login/register pages
-  // or redirecting unauthenticated users to login
+  // Check if path is public
+  const isPublicPath = PUBLIC_PATHS.some(path => 
+    request.nextUrl.pathname.startsWith(path)
+  )
+
+  if (isPublicPath) {
+    return res
+  }
+
+  const { data: { session } } = await browserClient.auth.getSession()
+
+  if (!session) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
 
   return res
 }
@@ -21,6 +46,13 @@ export const config = {
      * - public folder
      */
     "/((?!_next/static|_next/image|favicon.ico|public).*)",
+    '/login',
+    '/register',
+    '/reset-password',
+    '/update-password',
+    '/logout',
+    '/',
+    '/about',
+    '/contact'
   ],
 }
-

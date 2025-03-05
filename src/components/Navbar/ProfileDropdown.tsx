@@ -53,9 +53,18 @@ export function ProfileDropdown({ user, isAuthenticated }: ProfileDropdownProps)
             </DropdownMenuItem>
           </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <LogOutIcon className="mr-2 h-4 w-4" />
-          {isAuthenticated ? <Link href="/logout">Sign Out</Link> : <Link href="/login">Sign In</Link>}
+        <DropdownMenuItem className="flex items-center text-red-500 w-full">
+          {isAuthenticated ? (
+            <Link href="/logout" className="flex items-center text-red-500 w-full">
+              <LogOutIcon className="mr-2 h-4 w-4" />
+              Sign Out
+            </Link>
+          ) : (
+            <Link href="/login" className="flex items-center text-primary w-full">
+              <LogInIcon className="mr-2 h-4 w-4" />
+              Sign In
+            </Link>
+          )}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
