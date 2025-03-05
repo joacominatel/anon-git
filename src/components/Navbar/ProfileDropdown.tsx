@@ -1,6 +1,7 @@
 "use client"
 
 import { UserIcon, LogOutIcon, UserCircleIcon, PlusIcon, SettingsIcon, LogInIcon } from "lucide-react"
+import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -53,18 +54,10 @@ export function ProfileDropdown({ user, isAuthenticated }: ProfileDropdownProps)
             </DropdownMenuItem>
           </DropdownMenuGroup>
         )}
-        {!isAuthenticated && (
-          <DropdownMenuGroup>
-            <DropdownMenuItem>
-              <LogInIcon className="mr-2 h-4 w-4" />
-              <span>Sign In</span>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <LogOutIcon className="mr-2 h-4 w-4" />
-          {isAuthenticated ? <span>Sign Out</span> : <span>Sign In</span>}
+          {isAuthenticated ? <Link href="/logout">Sign Out</Link> : <Link href="/login">Sign In</Link>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -15,6 +15,7 @@ import {
   type SignUpData,
 } from '@/services/userServices';
 import type { User } from '@/lib/types/userTypes';
+import { toast } from 'sonner';
 
 type AuthContextType = {
   user: User | null;
@@ -52,6 +53,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { user: loggedInUser, error } = await signInUserClient(email, password);
       if (error) {
         console.error("Error al iniciar sesión:", error.message);
+        toast.error("Error al iniciar sesión", {
+          description: error.message,
+        });
       } else {
         setUser(loggedInUser as unknown as User);
       }
@@ -68,6 +72,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { user: newUser, error } = await signUpUserClient(data);
       if (error) {
         console.error("Error al registrarse:", error.message);
+        toast.error("Error al registrarse", {
+          description: error.message,
+        });
       } else {
         setUser(newUser as unknown as User);
       }
@@ -84,11 +91,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await signOutUserClient();
       if (error) {
         console.error("Error al cerrar sesión:", error.message);
+        toast.error("Error al cerrar sesión", {
+          description: error.message,
+        });
       } else {
         setUser(null);
       }
     } catch (error) {
       console.error("Error en signOut:", error);
+      toast.error("Error al cerrar sesión", {
+        description: error instanceof Error ? error.message : 'Error desconocido',
+      });
     } finally {
       setLoading(false);
     }

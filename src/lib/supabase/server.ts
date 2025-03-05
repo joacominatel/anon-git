@@ -22,3 +22,9 @@ export const createClient = async (cookieStore: ReturnType<typeof cookies>) => {
     },
   );
 };
+
+export const getUser = async (cookieStore: ReturnType<typeof cookies>) => {
+  const supabase = await createClient(cookieStore)
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}
