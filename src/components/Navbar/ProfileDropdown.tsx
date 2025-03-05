@@ -1,6 +1,6 @@
 "use client"
 
-import { UserIcon, LogOutIcon, UserCircleIcon, PlusIcon, SettingsIcon } from "lucide-react"
+import { UserIcon, LogOutIcon, UserCircleIcon, PlusIcon, SettingsIcon, LogInIcon } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -11,20 +11,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { User } from "@/lib/types/userTypes"
 
-export function ProfileDropdown() {
-  // This would come from your web3 authentication
-  const user = {
-    name: "Anonymous User",
-    address: "0x1234...5678",
-    image: null,
-  }
+interface ProfileDropdownProps {
+  user: User | null
+  isAuthenticated: boolean
+}
 
+export function ProfileDropdown({ user, isAuthenticated }: ProfileDropdownProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar className="h-8 w-8 cursor-pointer">
-          <AvatarImage src={user.image || ""} alt={user.name} />
+          <AvatarImage src={user?.avatar_url || ""} alt={user?.username} />
           <AvatarFallback className="bg-primary text-primary-foreground">
             <UserCircleIcon className="h-5 w-5" />
           </AvatarFallback>
@@ -33,13 +32,14 @@ export function ProfileDropdown() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user.address}</p>
+            <p className="text-sm font-medium leading-none">{user?.full_name}</p>
+            <p className="text-xs leading-none text-muted-foreground">{user?.wallet_address}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>
+        {isAuthenticated && (
+          <DropdownMenuGroup>
+            <DropdownMenuItem>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
           </DropdownMenuItem>
@@ -50,12 +50,21 @@ export function ProfileDropdown() {
           <DropdownMenuItem>
             <SettingsIcon className="mr-2 h-4 w-4" />
             <span>Settings</span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        )}
+        {!isAuthenticated && (
+          <DropdownMenuGroup>
+            <DropdownMenuItem>
+              <LogInIcon className="mr-2 h-4 w-4" />
+              <span>Sign In</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <LogOutIcon className="mr-2 h-4 w-4" />
-          <span>Disconnect Wallet</span>
+          {isAuthenticated ? <span>Sign Out</span> : <span>Sign In</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

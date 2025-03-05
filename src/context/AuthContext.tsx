@@ -110,3 +110,8 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
+export const useIsAuthenticated = (): boolean => {
+  const { user } = useAuth();
+  return user !== null;
+};

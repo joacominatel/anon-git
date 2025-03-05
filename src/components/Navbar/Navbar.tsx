@@ -12,7 +12,13 @@ import { CreateDropdown } from "./CreateDropdown"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { MenuIcon } from "lucide-react"
+import { useAuth, useIsAuthenticated } from "@/context/AuthContext"
+import { User } from "@/lib/types/userTypes"
+
 export function Navbar() {
+  const { user } = useAuth()
+  const isAuthenticated = useIsAuthenticated()
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between px-4">
@@ -67,7 +73,7 @@ export function Navbar() {
           <Notifications />
           <ThemeToggle />
           <SettingsDropdown />
-          <ProfileDropdown />
+          <ProfileDropdown user={user as User} isAuthenticated={isAuthenticated} />
         </div>
       </div>
     </header>

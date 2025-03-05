@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect } from "react"
-import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { GitBranchIcon, ArrowDownIcon } from "lucide-react"
 import { HorizontalScrollSection } from "@/components/Home/HorizontalScrollSection"
@@ -12,8 +11,6 @@ import { Footer } from "@/components/Footer/Footer"
 import { motion } from "framer-motion"
 
 export default function Page() {
-  const { resolvedTheme, setTheme } = useTheme()
-
   // Función para activar las animaciones al hacer scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
