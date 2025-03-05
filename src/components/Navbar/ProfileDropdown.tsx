@@ -38,7 +38,6 @@ export function ProfileDropdown({ user, isAuthenticated }: ProfileDropdownProps)
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {isAuthenticated && (
           <DropdownMenuGroup>
             <DropdownMenuItem>
             <UserIcon className="mr-2 h-4 w-4" />
@@ -53,7 +52,6 @@ export function ProfileDropdown({ user, isAuthenticated }: ProfileDropdownProps)
             <span>Settings</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <LogOutIcon className="mr-2 h-4 w-4" />

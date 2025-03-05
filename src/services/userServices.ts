@@ -77,7 +77,6 @@ export async function signInUserClient(email: string, password: string) {
 }
 
 export async function getUserClient() {
-  const client = createBrowserClient();
   const {
     data: { user },
     error,
@@ -98,6 +97,13 @@ export async function signOutUserClient() {
 export async function resetPassword(email: string) {
   const { error } = await client.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/auth/update-password`,
+  });
+  return { error };
+}
+
+export async function updatePassword(password: string) {
+  const { error } = await client.auth.updateUser({
+    password,
   });
   return { error };
 }
