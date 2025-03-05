@@ -118,9 +118,66 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
+
+  /* Añadir transiciones suaves para todos los elementos que cambian con el tema */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 0.3s;
+    transition-timing-function: ease;
+  }
+}
+
+.scroll-container {
+  @apply flex overflow-x-auto pb-6 snap-x snap-mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.3) transparent;
+}
+
+.scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+  @apply bg-transparent rounded-full;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/50;
+}
+
+.scroll-item {
+  @apply snap-start flex-shrink-0;
+}
+
+/* Animaciones para elementos al hacer scroll */
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/50;
 }
