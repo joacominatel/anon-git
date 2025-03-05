@@ -18,8 +18,9 @@ export type SignUpData = {
  * Estas funciones se ejecutan en el navegador.
  */
 
+const client = createBrowserClient();
+
 export async function signUpUserClient(data: SignUpData) {
-  const client = createBrowserClient();
   const { data: authData, error: authError } = await client.auth.signUp({
     email: data.email,
     password: data.password,
@@ -62,7 +63,6 @@ export async function signUpUserClient(data: SignUpData) {
 }
 
 export async function signInUserClient(email: string, password: string) {
-  const client = createBrowserClient();
   const { data: authData, error } = await client.auth.signInWithPassword({
     email,
     password,
@@ -89,9 +89,15 @@ export async function getUserClient() {
 }
 
 export async function signOutUserClient() {
-  const client = createBrowserClient();
   const { error } = await client.auth.signOut();
   // Limpiar la cookie del token en el cliente.
   document.cookie = "sb:token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  return { error };
+}
+
+export async function resetPassword(email: string) {
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth/update-password`,
+  });
   return { error };
 }

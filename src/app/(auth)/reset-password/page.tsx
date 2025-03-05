@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { createClient } from "@/lib/supabase/client"
+import { resetPassword } from "@/services/userServices"
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("")
@@ -25,10 +25,7 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
 
     try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
-      })
+      const { error } = await resetPassword(email)
 
       if (error) {
         throw error
