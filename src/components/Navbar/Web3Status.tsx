@@ -10,7 +10,7 @@ export function Web3Status() {
   // This would come from your web3 provider
   const [isConnected, setIsConnected] = useState(true)
   const [address, setAddress] = useState("0x1234...5678")
-  const [network, setNetwork] = useState("Ethereum")
+  const [network] = useState("Ethereum")
 
   const handleConnect = () => {
     // Connect wallet logic
