@@ -107,3 +107,11 @@ export async function updatePassword(password: string) {
   });
   return { error };
 }
+
+export async function getAllUsers() {
+  const { data, error } = await client.from('users').select('*');
+  if (error) {
+    throw error;
+  }
+  return data;
+}

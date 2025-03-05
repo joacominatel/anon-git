@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth, useIsAuthenticated } from "@/context/AuthContext"
-import { getRepository, deleteRepository, updateRepository, addCollaborator, getCollaboratorsByRepository, removeCollaborator } from "@/services/repositoryService"
+import { getRepository, deleteRepository, updateRepository, addCollaborator, getCollaboratorsByRepository, removeCollaborator, updateCollaboratorRole, checkUserRepositoryPermissions } from "@/services/repositoryService"
+import { getAllUsers } from "@/services/userServices"
 import type { Repository, RepositoryCollaborator } from "@/lib/types/repositoryTypes"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -39,6 +40,22 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CollaboratorsList } from "@/components/Repositories/CollaboratorsList"
 
+// Definir el tipo User aquí para evitar problemas de importación
+type User = {
+  id: string;
+  username: string;
+  email: string;
+  full_name?: string;
+  display_name?: string;
+  country?: string;
+  phone?: string;
+  avatar_url?: string;
+  bio?: string;
+  wallet_address?: string;
+  created_at: string; 
+  updated_at: string;
+};
+
 export default function RepositoryDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { user } = useAuth()
@@ -49,8 +66,24 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
   const [isDeleting, setIsDeleting] = useState(false)
   const [activeTab, setActiveTab] = useState("code")
   const [collaborators, setCollaborators] = useState<RepositoryCollaborator[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [permissions, setPermissions] = useState<{
+    canView: boolean;
+    canEdit: boolean;
+    isOwner: boolean;
+    role: string | null;
+  }>({
+    canView: false,
+    canEdit: false,
+    isOwner: false,
+    role: null,
+  })
 
-  const isOwner = isAuthenticated && user?.id === repository?.owner_id
+  const isUserAdmin = collaborators.some(
+    collab => collab.user_id === user?.id && collab.role === 'admin'
+  )
+  
+  const canManageRepository = permissions.isOwner || isUserAdmin
 
   useEffect(() => {
     const fetchRepository = async () => {
@@ -75,24 +108,67 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
   }, [params.id])
 
   useEffect(() => {
-    const fetchCollaborators = async () => {
-      const data = await getCollaboratorsByRepository(params.id)
-      setCollaborators(data)
-    }
-    fetchCollaborators()
-  }, [params.id])
+    const fetchUsers = async () => {
+      try {
+        const data = await getAllUsers();
+        console.log(`Datos de usuarios: ${data}`)
+        setUsers(data);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
 
-  const handleAddCollaborator = async (collaboratorId: string) => {
+  useEffect(() => {
+    const checkPermissions = async () => {
+      if (isAuthenticated && user && repository) {
+        try {
+          const userPermissions = await checkUserRepositoryPermissions(repository.id, user.id);
+          setPermissions(userPermissions);
+        } catch (err) {
+          console.error("Error checking permissions:", err);
+        }
+      }
+    };
+    
+    if (repository && isAuthenticated) {
+      checkPermissions();
+    } else if (repository && !repository.is_private) {
+      setPermissions({
+        canView: true,
+        canEdit: false,
+        isOwner: false,
+        role: null
+      });
+    }
+  }, [repository, isAuthenticated, user]);
+
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      try {
+        const data = await getCollaboratorsByRepository(params.id);
+        setCollaborators(data);
+      } catch (err) {
+        console.error("Error fetching collaborators:", err);
+      }
+    };
+    fetchCollaborators();
+  }, [params.id]);
+
+  const handleAddCollaborator = async (collaboratorId: string, role: 'admin' | 'write' | 'read' = 'read') => {
     if (!repository?.id) {
       toast.error("Repository ID is missing")
       return
     }
     try {
-      await addCollaborator(repository.id, collaboratorId)
-      toast.success("Collaborator added successfully")
+      await addCollaborator(repository.id, collaboratorId, role)
+      toast.success("Colaborador añadido exitosamente")
+      const updatedCollaborators = await getCollaboratorsByRepository(repository.id)
+      setCollaborators(updatedCollaborators)
     } catch (err) {
       console.error("Error adding collaborator:", err)
-      toast.error("Failed to add collaborator")
+      toast.error("No se pudo añadir al colaborador: " + (err as Error).message)
     }
   }
 
@@ -103,10 +179,30 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
     }
     try {
       await removeCollaborator(repository.id, collaboratorId)
-      toast.success("Collaborator removed successfully")
+      toast.success("Colaborador eliminado exitosamente")
+      setCollaborators(collaborators.filter(c => c.user_id !== collaboratorId))
     } catch (err) {
       console.error("Error removing collaborator:", err)
-      toast.error("Failed to remove collaborator")
+      toast.error("No se pudo eliminar al colaborador: " + (err as Error).message)
+    }
+  }
+
+  const handleUpdateCollaboratorRole = async (collaboratorId: string, newRole: 'admin' | 'write' | 'read') => {
+    if (!repository?.id) {
+      toast.error("Repository ID is missing")
+      return
+    }
+    try {
+      await updateCollaboratorRole(repository.id, collaboratorId, newRole)
+      toast.success("Rol de colaborador actualizado exitosamente")
+      setCollaborators(collaborators.map(c => 
+        c.user_id === collaboratorId 
+          ? { ...c, role: newRole } 
+          : c
+      ))
+    } catch (err) {
+      console.error("Error updating collaborator role:", err)
+      toast.error("No se pudo actualizar el rol del colaborador: " + (err as Error).message)
     }
   }
   
@@ -167,19 +263,16 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
     )
   }
 
-  // Check if user can view this repository
-  const canView = !repository.is_private || isOwner
-
-  if (!canView) {
+  if (!permissions.canView) {
     return (
       <div className="p-8">
         <div className="bg-destructive/15 text-destructive p-4 rounded-md my-4 flex items-center">
           <AlertTriangleIcon className="h-5 w-5 mr-2" />
-          This repository is private. You don't have permission to view it.
+          Este repositorio es privado. No tienes permiso para verlo.
         </div>
         <Button variant="outline" onClick={() => router.push("/repositories")} className="mt-4">
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back to Repositories
+          Volver a Repositorios
         </Button>
       </div>
     )
@@ -193,53 +286,60 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
             <h1 className="text-3xl font-bold tracking-tight">{repository.name}</h1>
             <Badge variant={repository.is_private ? "outline" : "secondary"}>
               {repository.is_private ? <EyeOffIcon className="h-3 w-3 mr-1" /> : <EyeIcon className="h-3 w-3 mr-1" />}
-              {repository.is_private ? "Private" : "Public"}
+              {repository.is_private ? "Privado" : "Público"}
             </Badge>
-            {repository.for_sale && <Badge variant="destructive">For Sale</Badge>}
-            {repository.accepts_donations && <Badge variant="default">Accepts Donations</Badge>}
-            <Badge variant="secondary">{collaborators.length} collaborators</Badge>
+            {repository.for_sale && <Badge variant="destructive">En Venta</Badge>}
+            {repository.accepts_donations && <Badge variant="default">Acepta Donaciones</Badge>}
+            <Badge variant="secondary">{collaborators.length} colaboradores</Badge>
+            {permissions.role && (
+              <Badge variant={permissions.role === 'admin' ? 'destructive' : permissions.role === 'write' ? 'default' : 'secondary'}>
+                Tu rol: {permissions.role === 'admin' ? 'Administrador' : permissions.role === 'write' ? 'Escritura' : 'Lectura'}
+              </Badge>
+            )}
           </div>
-          <p className="text-muted-foreground mt-1">{repository.description || "No description provided"}</p>
+          <p className="text-muted-foreground mt-1">{repository.description || "Sin descripción"}</p>
         </div>
-        {isOwner && (
+        {canManageRepository && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setActiveTab("settings")}>
               <PencilIcon className="h-4 w-4 mr-2" />
-              Edit
+              Editar
             </Button>
             <Button variant="outline" onClick={() => setActiveTab("collaborators")}>
               <UsersIcon className="h-4 w-4 mr-2" />
-              Collaborators
+              Colaboradores
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <TrashIcon className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the repository and all of its contents.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-                    {isDeleting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      "Delete"
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {permissions.isOwner && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    <TrashIcon className="h-4 w-4 mr-2" />
+                    Eliminar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción no se puede deshacer. Eliminará permanentemente el repositorio y todo su contenido.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Eliminando...
+                        </>
+                      ) : (
+                        "Eliminar"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         )}
       </div>
@@ -270,7 +370,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
           <TabsTrigger value="code">Code</TabsTrigger>
           <TabsTrigger value="issues">Issues</TabsTrigger>
           <TabsTrigger value="pull-requests">Pull Requests</TabsTrigger>
-          {isOwner && <TabsTrigger value="settings">Settings</TabsTrigger>}
+          {permissions.isOwner && <TabsTrigger value="settings">Settings</TabsTrigger>}
           <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
         </TabsList>
         <TabsContent value="code" className="mt-6">
@@ -292,13 +392,30 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
             <p className="text-muted-foreground mt-2">Pull requests for this repository will appear here.</p>
           </div>
         </TabsContent>
-        {isOwner && (
+        {permissions.isOwner && (
           <TabsContent value="settings" className="mt-6">
             <RepositorySettings repository={repository} onUpdate={handleUpdateRepository} />
           </TabsContent>
         )}
         <TabsContent value="collaborators" className="mt-6">
-          <CollaboratorsList collaborators={collaborators} users={[]} />
+          <div className="rounded-md border p-6">
+            <h2 className="text-xl font-bold mb-4">Colaboradores del Repositorio</h2>
+            <p className="text-muted-foreground mb-6">
+              Los colaboradores pueden acceder a este repositorio según su nivel de permiso. 
+              Los administradores pueden gestionar colaboradores y realizar cambios en el repositorio.
+            </p>
+            <CollaboratorsList 
+              collaborators={collaborators} 
+              users={users}
+              repositoryId={repository.id}
+              isOwner={permissions.isOwner}
+              isUserAdmin={isUserAdmin}
+              onAddCollaborator={handleAddCollaborator}
+              onRemoveCollaborator={handleRemoveCollaborator}
+              onUpdateRole={handleUpdateCollaboratorRole}
+              ownerId={repository.owner_id}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

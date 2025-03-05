@@ -51,8 +51,8 @@ export default function RepositoriesPage() {
   return (
     <div className="p-8">
       <PageHeader
-        title="Repositories"
-        description="Discover and manage decentralized code repositories"
+        title="Repositorios"
+        description="Descubre y gestiona repositorios de código descentralizados"
         action={isAuthenticated && <CreateRepositoryButton />}
       />
 
@@ -72,24 +72,35 @@ export default function RepositoriesPage() {
 
           <Tabs defaultValue="all" className="mt-6" onValueChange={setActiveTab}>
             <TabsList>
-              <TabsTrigger value="all">All Repositories</TabsTrigger>
+              <TabsTrigger value="all">Todos los Repositorios</TabsTrigger>
               {isAuthenticated && (
-                <TabsTrigger value="yours">Your Repositories</TabsTrigger>
+                <TabsTrigger value="yours">Tus Repositorios</TabsTrigger>
               )}
             </TabsList>
             <TabsContent value="all">
-              <RepositoryList 
-                repositories={repositories} 
-                emptyMessage="No public repositories found." 
-              />
+              {repositories.length === 0 ? (
+                <div className="text-center p-8 border rounded-md">
+                  <p className="text-muted-foreground">No hay repositorios públicos disponibles.</p>
+                </div>
+              ) : (
+                <RepositoryList 
+                  repositories={repositories} 
+                  emptyMessage="No hay repositorios públicos disponibles."
+                />
+              )}
             </TabsContent>
             {isAuthenticated && (
               <TabsContent value="yours">
-                <RepositoryList 
-                  repositories={userRepositories} 
-                  emptyMessage="You don't have any repositories yet." 
-                  showCreateButton 
-                />
+                {userRepositories.length === 0 ? (
+                  <div className="text-center p-8 border rounded-md">
+                    <p className="text-muted-foreground">Aún no has creado ningún repositorio.</p>
+                  </div>
+                ) : (
+                  <RepositoryList 
+                    repositories={userRepositories} 
+                    emptyMessage="Aún no has creado ningún repositorio."
+                  />
+                )}
               </TabsContent>
             )}
           </Tabs>
