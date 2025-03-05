@@ -49,7 +49,7 @@ export default function RepositoriesPage() {
   }, [isAuthenticated, user?.id])
 
   return (
-    <div className="container py-8">
+    <div className="p-8">
       <PageHeader
         title="Repositories"
         description="Discover and manage decentralized code repositories"

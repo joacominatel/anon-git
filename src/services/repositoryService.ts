@@ -44,7 +44,7 @@ export async function getRepositories() {
 }
 
 export async function getRepositoriesByUser(userId: string) {
-  const { data, error } = await client.from('repositories').select('*').eq('user_id', userId)
+  const { data, error } = await client.from('repositories').select('*').eq('owner_id', userId)
   if (error) {
     throw error
   }

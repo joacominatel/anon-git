@@ -107,7 +107,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
 
   if (isLoading) {
     return (
-      <div className="container py-8 flex justify-center items-center h-64">
+      <div className="p-8 flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
@@ -115,7 +115,7 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
 
   if (error || !repository) {
     return (
-      <div className="container py-8">
+      <div className="p-8">
         <div className="bg-destructive/15 text-destructive p-4 rounded-md my-4 flex items-center">
           <AlertTriangleIcon className="h-5 w-5 mr-2" />
           {error || "Repository not found"}
