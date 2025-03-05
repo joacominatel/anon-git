@@ -17,7 +17,6 @@ import {
 export function RepositoryFilters() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('updated')
-  const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
     showPrivate: true,
     showPublic: true,

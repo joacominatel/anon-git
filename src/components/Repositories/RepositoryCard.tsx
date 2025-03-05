@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Repository } from '@/lib/types/repositoryTypes'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { GitForkIcon, StarIcon, EyeIcon, EyeOffIcon, CalendarIcon, GitBranchIcon, UsersIcon } from 'lucide-react'
+import { EyeIcon, EyeOffIcon, CalendarIcon, GitBranchIcon, UsersIcon } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 

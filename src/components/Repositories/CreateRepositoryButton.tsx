@@ -24,7 +24,6 @@ import {
 import { toast } from "sonner"
 
 export function CreateRepositoryButton() {
-  const router = useRouter()
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
