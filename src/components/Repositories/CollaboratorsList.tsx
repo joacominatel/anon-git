@@ -229,7 +229,7 @@ export function CollaboratorsList({
             ) : (
                 <div className="space-y-2">
                     {collaborators.map((collaborator) => {
-                        const user = users.find(u => u.id === collaborator.user_id)
+                        const user = collaborator.user || users.find(u => u.id === collaborator.user_id)
                         const isRepositoryOwner = collaborator.user_id === ownerId
                         
                         return (

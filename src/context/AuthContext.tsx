@@ -36,8 +36,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const refreshUser = async () => {
     setLoading(true);
     const { user: fetchedUser, error } = await getUserClient();
-    if (!error) {
-      setUser(fetchedUser as unknown as User);
+    if (!error && fetchedUser) {
+      // Ya no necesitamos cast forzado, asegurarnos de tener datos completos
+      setUser(fetchedUser as User);
+    } else {
+      setUser(null);
     }
     setLoading(false);
   };

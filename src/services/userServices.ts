@@ -77,14 +77,36 @@ export async function signInUserClient(email: string, password: string) {
 }
 
 export async function getUserClient() {
+  // Obtener usuario de autenticación
   const {
-    data: { user },
+    data: { user: authUser },
     error,
   } = await client.auth.getUser();
-  if (error) {
+  
+  if (error || !authUser) {
     return { error };
   }
-  return { user };
+  
+  console.log('authUser', authUser.id)
+  // Obtener datos adicionales de la tabla users
+  const { data: userData, error: userError } = await client
+    .from('users')
+    .select('*')
+    .eq('id', authUser.id)
+    .single();
+
+  if (userError) {
+    console.error('Error fetching user data from users table:', userError);
+    return { user: authUser };
+  }
+  
+  // Combinar los datos de autenticación con los datos de la tabla users
+  const fullUser = {
+    ...authUser,
+    ...userData
+  };
+  
+  return { user: fullUser };
 }
 
 export async function signOutUserClient() {

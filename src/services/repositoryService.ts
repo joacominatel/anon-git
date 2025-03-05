@@ -87,11 +87,35 @@ export async function removeCollaborator(repositoryId: string, collaboratorId: s
 }
 
 export async function getCollaboratorsByRepository(repositoryId: string) {
-  const { data, error } = await client.from('repository_collaborators').select('*').eq('repository_id', repositoryId)
+  const { data, error } = await client
+    .from('repository_collaborators')
+    .select(`
+      repository_id,
+      user_id,
+      role,
+      created_at,
+      user:user_id (
+        id,
+        username,
+        email,
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('repository_id', repositoryId)
+  
   if (error) {
     throw error
   }
-  return data
+  
+  // Transformar los datos para mantener la estructura esperada
+  return data.map(item => ({
+    repository_id: item.repository_id,
+    user_id: item.user_id,
+    role: item.role,
+    created_at: item.created_at,
+    user: item.user // Añadir la información de usuario
+  }))
 }
 
 export async function updateCollaboratorRole(repositoryId: string, collaboratorId: string, newRole: 'admin' | 'write' | 'read') {
@@ -159,4 +183,23 @@ export async function searchUsers(query: string, pageSize: number = 5) {
   }
   
   return data
+}
+
+// Añadir una nueva función para obtener repositorios donde el usuario es colaborador
+export async function getCollaboratedRepositories(userId: string) {
+  const { data, error } = await client
+    .from('repositories')
+    .select('*, repository_collaborators!inner(user_id, role)')
+    .eq('repository_collaborators.user_id', userId)
+  
+  if (error) {
+    throw error
+  }
+  
+  // Añadir una propiedad que indique que el usuario es colaborador
+  return data.map(repo => ({
+    ...repo,
+    is_collaborator: true,
+    collaborator_role: repo.repository_collaborators[0].role
+  }))
 }

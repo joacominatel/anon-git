@@ -108,19 +108,6 @@ export default function RepositoryDetailPage({ params }: { params: { id: string 
   }, [params.id])
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const data = await getAllUsers();
-        console.log(`Datos de usuarios: ${data}`)
-        setUsers(data);
-      } catch (err) {
-        console.error("Error fetching users:", err);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
     const checkPermissions = async () => {
       if (isAuthenticated && user && repository) {
         try {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth, useIsAuthenticated } from '@/context/AuthContext'
-import { getRepositories, getRepositoriesByUser } from '@/services/repositoryService'
+import { getRepositories, getRepositoriesByUser, getCollaboratedRepositories } from '@/services/repositoryService'
 import { Repository } from '@/lib/types/repositoryTypes'
 import { RepositoryList } from '@/components/Repositories/RepositoryList'
 import { RepositoryFilters } from '@/components/Repositories/RepositoryFilters'
@@ -11,6 +11,7 @@ import { CreateRepositoryButton } from '@/components/Repositories/CreateReposito
 import { PageHeader } from '@/components/ui/page-header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2 } from 'lucide-react'
+import { RepositoryCard } from '@/components/Repositories/RepositoryCard'
 
 export default function RepositoriesPage() {
   const router = useRouter()
@@ -18,6 +19,7 @@ export default function RepositoriesPage() {
   const isAuthenticated = useIsAuthenticated()
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [userRepositories, setUserRepositories] = useState<Repository[]>([])
+  const [collaboratedRepositories, setCollaboratedRepositories] = useState<Repository[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('all')
@@ -32,14 +34,18 @@ export default function RepositoriesPage() {
         const allRepos = await getRepositories()
         setRepositories(allRepos.filter(repo => !repo.is_private))
 
-        // If authenticated, fetch user's repositories
+        // If authenticated, fetch user's repositories and collaborated repositories
         if (isAuthenticated && user?.id) {
           const userRepos = await getRepositoriesByUser(user.id)
           setUserRepositories(userRepos)
+          
+          // Fetch repositories where the user is a collaborator
+          const collabRepos = await getCollaboratedRepositories(user.id)
+          setCollaboratedRepositories(collabRepos)
         }
       } catch (err) {
         console.error('Error fetching repositories:', err)
-        setError('Failed to load repositories. Please try again later.')
+        setError('Error al cargar los repositorios. Por favor, inténtelo de nuevo más tarde.')
       } finally {
         setIsLoading(false)
       }
@@ -47,6 +53,14 @@ export default function RepositoriesPage() {
 
     fetchRepositories()
   }, [isAuthenticated, user?.id])
+
+  // Combine user's repositories and collaborated repositories for the "Your Repositories" tab
+  const allUserRepositories = [
+    ...userRepositories,
+    ...collaboratedRepositories.filter(
+      collabRepo => !userRepositories.some(userRepo => userRepo.id === collabRepo.id)
+    )
+  ]
 
   return (
     <div className="p-8">
@@ -76,6 +90,9 @@ export default function RepositoriesPage() {
               {isAuthenticated && (
                 <TabsTrigger value="yours">Tus Repositorios</TabsTrigger>
               )}
+              {isAuthenticated && collaboratedRepositories.length > 0 && (
+                <TabsTrigger value="collaborations">Colaboraciones</TabsTrigger>
+              )}
             </TabsList>
             <TabsContent value="all">
               {repositories.length === 0 ? (
@@ -83,24 +100,43 @@ export default function RepositoriesPage() {
                   <p className="text-muted-foreground">No hay repositorios públicos disponibles.</p>
                 </div>
               ) : (
-                <RepositoryList 
-                  repositories={repositories} 
-                  emptyMessage="No hay repositorios públicos disponibles."
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {repositories.map(repo => (
+                    <RepositoryCard key={repo.id} repository={repo} />
+                  ))}
+                </div>
               )}
             </TabsContent>
             {isAuthenticated && (
               <TabsContent value="yours">
-                {userRepositories.length === 0 ? (
+                {allUserRepositories.length === 0 ? (
                   <div className="text-center p-8 border rounded-md">
                     <p className="text-muted-foreground">Aún no has creado ningún repositorio.</p>
                   </div>
                 ) : (
-                  <RepositoryList 
-                    repositories={userRepositories} 
-                    emptyMessage="Aún no has creado ningún repositorio."
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {allUserRepositories.map(repo => (
+                      <RepositoryCard 
+                        key={repo.id} 
+                        repository={repo} 
+                        isCollaboration={repo.is_collaborator}
+                      />
+                    ))}
+                  </div>
                 )}
+              </TabsContent>
+            )}
+            {isAuthenticated && collaboratedRepositories.length > 0 && (
+              <TabsContent value="collaborations">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {collaboratedRepositories.map(repo => (
+                    <RepositoryCard 
+                      key={repo.id} 
+                      repository={repo} 
+                      isCollaboration={true} 
+                    />
+                  ))}
+                </div>
               </TabsContent>
             )}
           </Tabs>

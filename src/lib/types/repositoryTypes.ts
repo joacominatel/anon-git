@@ -1,3 +1,5 @@
+import { User } from './userTypes';
+
 export type Repository = {
     id: string; // UUID generado automáticamente
     owner_id: string; // UUID del usuario propietario
@@ -10,6 +12,9 @@ export type Repository = {
     default_branch: string;
     created_at: string;
     updated_at: string;
+    is_collaborator?: boolean; // Indica si el usuario actual es colaborador
+    collaborator_role?: 'admin' | 'write' | 'read'; // Rol del colaborador
+    repository_collaborators?: any[]; // Para mapeo de relaciones
 };
 
 
@@ -18,6 +23,7 @@ export type RepositoryCollaborator = {
     user_id: string; // UUID del colaborador
     role: 'admin' | 'write' | 'read';
     created_at: string;
+    user?: User; // Información de usuario del colaborador
 };
 
 export type RepositoryStar = {
