@@ -137,3 +137,11 @@ export async function getAllUsers() {
   }
   return data;
 }
+
+export async function getUserById(id: string) {
+  const { data, error } = await client.from('users').select('*').eq('id', id).single();
+  if (error) {
+    throw error;
+  }
+  return data;
+}

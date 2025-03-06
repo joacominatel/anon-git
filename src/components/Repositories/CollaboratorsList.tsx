@@ -26,10 +26,10 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { searchUsers } from "@/services/repositoryService"
+import { searchUsers, getRepositoryCollaboratorsWithUsers } from "@/services/repositoryService"
+import { getUserById } from "@/services/userServices"
 interface CollaboratorsListProps {
     collaborators: RepositoryCollaborator[]
-    users: User[]
     repositoryId: string
     isOwner: boolean
     isUserAdmin: boolean
@@ -40,15 +40,13 @@ interface CollaboratorsListProps {
 }
 
 export function CollaboratorsList({ 
-    collaborators, 
-    users, 
     repositoryId, 
     isOwner, 
     isUserAdmin, 
     onAddCollaborator, 
     onRemoveCollaborator, 
     onUpdateRole, 
-    ownerId 
+    ownerId
 }: CollaboratorsListProps) {
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<User[]>([])
@@ -58,9 +56,9 @@ export function CollaboratorsList({
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isSearching, setIsSearching] = useState(false)
     const [error, setError] = useState<string | null>(null)
-
+    const [collaborators, setCollaborators] = useState<RepositoryCollaborator[]>([])
     const canManageCollaborators = isOwner || isUserAdmin
-    console.log(`Usuarios: ${JSON.stringify(users)}`)
+    const [users, setUsers] = useState<User[]>([])
 
     // Función para buscar usuarios
     const handleSearchUsers = async (query: string) => {
@@ -88,6 +86,24 @@ export function CollaboratorsList({
         
         return () => clearTimeout(timeoutId);
     }, [searchQuery]);
+
+    useEffect(() => {
+        const fetchCollaborators = async () => {
+            try {
+                const collaborators = await getRepositoryCollaboratorsWithUsers(repositoryId)
+                setCollaborators(collaborators)
+                const users = await Promise.all(collaborators.map(async (collaborator: RepositoryCollaborator) => {
+                    const user = await getUserById(collaborator.user_id)
+                    return user
+                }))
+                setUsers(users)
+            } catch (err) {
+                console.error("Error al obtener colaboradores:", err)
+            }
+        }
+        fetchCollaborators()
+    }, [repositoryId])
+    
 
     const handleAddCollaborator = async () => {
         setIsSubmitting(true)
@@ -229,25 +245,17 @@ export function CollaboratorsList({
             ) : (
                 <div className="space-y-2">
                     {collaborators.map((collaborator) => {
-                        const user = collaborator.user || users.find(u => u.id === collaborator.user_id)
                         const isRepositoryOwner = collaborator.user_id === ownerId
-                        
+
                         return (
                             <div 
                                 key={collaborator.user_id} 
                                 className="flex items-center justify-between p-3 border rounded-md"
                             >
                                 <div className="flex items-center gap-2">
-                                    <User2Icon className="h-5 w-5 text-muted-foreground" />
+                                    {users.find(user => user.id === collaborator.user_id) && <User2Icon className="h-5 w-5 text-muted-foreground" />}
                                     <div>
-                                        <div className="font-medium">
-                                            {getUserDisplayName(user)}
-                                            {isRepositoryOwner && (
-                                                <Badge variant="outline" className="ml-2">
-                                                    Propietario
-                                                </Badge>
-                                            )}
-                                        </div>
+                                        <p className="mb-1">@{users.find(user => user.id === collaborator.user_id)?.username} {isRepositoryOwner && <Badge variant="outline" className="ml-2">Propietario</Badge>}</p>
                                         {!isRepositoryOwner && (
                                             <div className="flex items-center gap-2">
                                                 <Badge variant={getRoleBadgeVariant(collaborator.role)}>
@@ -295,9 +303,4 @@ export function CollaboratorsList({
             )}
         </div>
     )
-}
-
-function getUserDisplayName(user?: User) {
-    if (!user) return "Usuario desconocido"
-    return user.full_name || user.email || user.id
 }

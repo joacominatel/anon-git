@@ -240,3 +240,13 @@ export async function getIsStarred(repositoryId: string, userId: string) {
   }
   return data.length > 0
 }
+
+export async function getRepositoryCollaboratorsWithUsers(repositoryId: string) {
+  const { data, error } = await client.rpc('get_repository_collaborators_with_users_uuid', {
+    p_repository_id: repositoryId
+  })
+  if (error) {
+    throw error
+  }
+  return data
+}
