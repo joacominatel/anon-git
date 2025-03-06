@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, use } from "react"
+import { useState, use, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
@@ -14,17 +14,19 @@ import {
 import { RepositoryDataLoader } from "@/components/Repositories/RepositoryDataLoader"
 import { RepositoryHeader } from "@/components/Repositories/RepositoryHeader"
 import { RepositoryStats } from "@/components/Repositories/RepositoryStats"
+import { getRepositoryStarsCount } from "@/services/repositoryService"
 import { RepositoryTabs } from "@/components/Repositories/RepositoryTabs"
 import type { Repository } from "@/lib/types/repositoryTypes"
+import { useAuth } from "@/context/AuthContext"
 
 export default function RepositoryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("code")
   const [isDeleting, setIsDeleting] = useState(false)
-
+  const [starsCount, setStarsCount] = useState(0)
   // Desempaquetar params usando React.use()
   const { id: repositoryId } = use(params)
-
+  const { user } = useAuth()
   // Manejadores de eventos
   const handleDelete = async (repositoryId: string) => {
     setIsDeleting(true)
@@ -90,6 +92,14 @@ export default function RepositoryDetailPage({ params }: { params: Promise<{ id:
     }
   }
 
+  useEffect(() => {
+    const fetchStarsCount = async () => {
+      const starsCount = await getRepositoryStarsCount(repositoryId)
+      setStarsCount(starsCount)
+    }
+    fetchStarsCount()
+  }, [repositoryId])
+
   return (
     <RepositoryDataLoader repositoryId={repositoryId}>
       {({ repository, collaborators, users, permissions, isUserAdmin, refetchData }) => (
@@ -106,7 +116,10 @@ export default function RepositoryDetailPage({ params }: { params: Promise<{ id:
 
           <RepositoryStats
             defaultBranch={repository.default_branch}
+            starsCount={starsCount}
             createdAt={repository.created_at}
+            repositoryId={repository.id}
+            userId={user?.id || ""}
           />
 
           <Separator className="my-6" />

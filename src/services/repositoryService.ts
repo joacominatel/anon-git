@@ -203,3 +203,40 @@ export async function getCollaboratedRepositories(userId: string) {
     collaborator_role: repo.repository_collaborators[0].role
   }))
 }
+
+export async function toggleStarRepository(repositoryId: string, userId: string) {
+  const { data, error } = await client.rpc('toggle_star_repository', {
+    p_repository_id: repositoryId,
+    p_user_id: userId
+  })
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function getStarredRepositories(userId: string) {
+  const { data, error } = await client.from('repository_stars').select('*').eq('user_id', userId)
+  if (error) {
+    throw error
+  }
+  return data
+}
+
+export async function getRepositoryStarsCount(repositoryId: string) {
+  const { data, error } = await client.from('repository_stars').select('*').eq('repository_id', repositoryId)
+  if (error) {
+    throw error
+  }
+  return data.length
+}
+
+export async function getIsStarred(repositoryId: string, userId: string) {
+  const { data, error } = await client.from('repository_stars').select('*').eq('repository_id', repositoryId).eq('user_id', userId)
+  if (error) {
+    throw error
+  }
+  return data.length > 0
+}
