@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { PhantomLoginButton } from '@/components/PhantomLoginButton'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -107,10 +108,14 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full" disabled>
-            <GithubIcon className="mr-2 h-4 w-4" />
-            GitHub (Coming Soon)
-          </Button>
+          <div className="flex flex-col gap-2">
+            <PhantomLoginButton className="w-full" variant="outline" />
+            
+            <Button variant="outline" className="w-full" disabled>
+              <GithubIcon className="mr-2 h-4 w-4" />
+              GitHub (Coming Soon)
+            </Button>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">

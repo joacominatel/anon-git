@@ -12,6 +12,7 @@ import {
   signUpUserClient,
   signOutUserClient,
   getUserClient,
+  signInWithPhantomClient,
   type SignUpData,
 } from '@/services/userServices';
 import type { User } from '@/lib/types/userTypes';
@@ -24,6 +25,7 @@ type AuthContextType = {
   signUp: (data: SignUpData) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  signInWithPhantom: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -110,9 +112,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInWithPhantom = async () => {
+    setLoading(true);
+    try {
+      const result = await signInWithPhantomClient();
+      if (result.error) {
+        console.error("Error al iniciar sesión con Phantom:", result.error.message);
+        toast.error("Error al iniciar sesión con Phantom", {
+          description: result.error.message,
+        });
+      } else if (result.user) {
+        setUser(result.user as unknown as User);
+        toast.success("¡Inicio de sesión con Phantom exitoso!", {
+          description: "Has iniciado sesión correctamente con tu wallet de Solana",
+        });
+      }
+    } catch (error) {
+      console.error("Error en signInWithPhantom:", error);
+      toast.error("Error al iniciar sesión con Phantom", {
+        description: error instanceof Error ? error.message : 'Error desconocido',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, loading, signIn, signUp, signOut, refreshUser }}
+      value={{ user, loading, signIn, signUp, signOut, refreshUser, signInWithPhantom }}
     >
       {children}
     </AuthContext.Provider>

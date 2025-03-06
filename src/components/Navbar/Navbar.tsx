@@ -69,7 +69,7 @@ export function Navbar() {
             <Search />
           </div>
           <Web3Status />
-          <CreateDropdown />
+          {isAuthenticated && <CreateDropdown />}
           <Notifications />
           <ThemeToggle />
           <SettingsDropdown />

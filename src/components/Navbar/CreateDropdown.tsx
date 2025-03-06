@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export function CreateDropdown() {
   return (
@@ -26,8 +27,10 @@ export function CreateDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem>
+            <Link href="/repositories" className="flex items-center w-full">
             <CodeIcon className="mr-2 h-4 w-4" />
             <span>Repository</span>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
             <GitForkIcon className="mr-2 h-4 w-4" />
